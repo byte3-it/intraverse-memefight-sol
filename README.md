@@ -1,1 +1,1 @@
-# intraverse-memefight-sol
+# intraverse-memefight

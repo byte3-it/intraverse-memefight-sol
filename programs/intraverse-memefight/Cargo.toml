@@ -1,12 +1,12 @@
 [package]
-name = "intraverse-memefight-sol"
+name = "intraverse-memefight"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "intraverse_memefight_sol"
+name = "intraverse_memefight"
 
 [features]
 default = []
@@ -14,7 +14,11 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build"]
+idl-build = [
+    "anchor-lang/idl-build",
+    "anchor-spl/idl-build"
+]
 
 [dependencies]
 anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"

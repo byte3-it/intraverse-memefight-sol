@@ -2,10 +2,10 @@
 
 [features]
 resolution = true
-skip-lint = false
+skip-lint = true
 
 [programs.localnet]
-intraverse_memefight_sol = "7k4a1fPARX2LLzKwD8FY8rGLvapfbikFkWL2cF1KurAX"
+intraverse_memefight = "7k4a1fPARX2LLzKwD8FY8rGLvapfbikFkWL2cF1KurAX"
 
 [registry]
 url = "https://api.apr.dev"
