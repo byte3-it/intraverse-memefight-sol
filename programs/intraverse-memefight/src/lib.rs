@@ -28,4 +28,23 @@ pub mod intraverse_memefight {
     pub fn withdraw(ctx: Context<WithdrawPoolContext>, amount: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, amount)
     }
+
+    pub fn create_competition(ctx: Context<CreateCompetitionContext>) -> Result<()> {
+        instructions::create_competition::handler(ctx)
+    }
+
+    pub fn conclude_competition(
+        ctx: Context<ConcludeCompetitionContext>,
+        is_a_winner: bool,
+    ) -> Result<()> {
+        instructions::conclude_competition::handler(ctx, is_a_winner)
+    }
+
+    pub fn claim_competition(ctx: Context<ClaimCompetitionContext>) -> Result<()> {
+        instructions::claim_competition::handler(ctx)
+    }
+
+    pub fn reset_competition(ctx: Context<ResetCompetitionContext>) -> Result<()> {
+        instructions::reset_competition::handler(ctx)
+    }
 }

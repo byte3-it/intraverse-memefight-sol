@@ -3,11 +3,11 @@ use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct TogglePoolContext<'info> {
-    #[account(mut, has_one = authority)]
+    #[account(mut, has_one = owner)]
     pub pool: Account<'info, Pool>,
 
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub owner: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

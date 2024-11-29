@@ -10,4 +10,10 @@ pub enum IntraverseErrorCode {
 
     #[msg("lp balance insufficient")]
     LpBalanceInsufficient,
+
+    #[msg("activation threshold not met")]
+    ActivationThresholdNotMet,
+
+    #[msg("pools authorities mismatch")]
+    PoolAuthoritiesMismatch,
 }

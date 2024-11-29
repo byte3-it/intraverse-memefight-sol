@@ -69,15 +69,6 @@ pub fn handler(ctx: Context<WithdrawPoolContext>, amount: u64) -> Result<()> {
     // burn LP tokens
     msg!("mint LPs");
     token::burn(
-        // CpiContext::new_with_signer(
-        //     ctx.accounts.token_program.to_account_info(),
-        //     Burn {
-        //         mint: ctx.accounts.pool_lp_mint.to_account_info(),
-        //         from: ctx.accounts.user_lp_token_account.to_account_info(),
-        //         authority: ctx.accounts.pool_authority.to_account_info(),
-        //     },
-        //     &[&seeds[..]],
-        // ),
         CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             Burn {

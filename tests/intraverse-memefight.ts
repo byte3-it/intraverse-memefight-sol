@@ -20,7 +20,6 @@ describe("intraverse-memefight", () => {
       .initializePool(new anchor.BN(1234))
       .accounts({
         pool: poolKp.publicKey,
-        authority: provider.wallet.publicKey,
         poolMint: poolMint,
       })
       .signers([poolKp])
@@ -33,7 +32,7 @@ describe("intraverse-memefight", () => {
     assert.ok(account.activationTh.eq(new anchor.BN(1234)));
     assert.ok(account.isOpen);
     assert.ok(account.mint.equals(poolMint));
-    assert.ok(account.authority.equals(provider.wallet.publicKey));
+    assert.ok(account.owner.equals(provider.wallet.publicKey));
 
     // TODO check authority of poolLpMint
   });
@@ -46,7 +45,6 @@ describe("intraverse-memefight", () => {
       .initializePool(new anchor.BN(1234))
       .accounts({
         pool: poolKp.publicKey,
-        authority: provider.wallet.publicKey,
         poolMint: poolMint,
       })
       .signers([poolKp])
@@ -85,7 +83,6 @@ describe("intraverse-memefight", () => {
       .initializePool(new anchor.BN(1234))
       .accounts({
         pool: poolKp.publicKey,
-        authority: provider.wallet.publicKey,
         poolMint: poolMint,
       })
       .signers([poolKp])
@@ -126,7 +123,6 @@ describe("intraverse-memefight", () => {
       .initializePool(new anchor.BN(1234))
       .accounts({
         pool: poolKp.publicKey,
-        authority: provider.wallet.publicKey,
         poolMint: poolMint,
       })
       .signers([poolKp])
@@ -177,7 +173,6 @@ describe("intraverse-memefight", () => {
       .initializePool(new anchor.BN(1234))
       .accounts({
         pool: poolKp.publicKey,
-        authority: provider.wallet.publicKey,
         poolMint: poolMint,
       })
       .signers([poolKp])
@@ -223,5 +218,87 @@ describe("intraverse-memefight", () => {
     assert.equal(await getTokenAccountAmount(provider, poolVault), initialMintAmount - depositedMint + withdrawAmount);
     assert.equal(await getTokenAccountAmount(provider, poolTreasury), depositedMint - withdrawAmount);
     assert.equal(await getTokenAccountAmount(provider, userLpTokenAccount), depositedMint - withdrawAmount);
+  });
+
+  it.only("create a competition", async () => {
+    const poolKp_a = anchor.web3.Keypair.generate();
+    const poolKp_b = anchor.web3.Keypair.generate();
+    const initialMintAmount = 5000;
+    const [poolMint_a, poolVault_a] = await createMintAndVault(provider, initialMintAmount);
+    const [poolMint_b, poolVault_b] = await createMintAndVault(provider, initialMintAmount);
+
+    // init pools
+    await program.methods
+      .initializePool(new anchor.BN(100))
+      .accounts({
+        pool: poolKp_a.publicKey,
+        poolMint: poolMint_a,
+      })
+      .signers([poolKp_a])
+      .rpc();
+    await program.methods
+      .initializePool(new anchor.BN(100))
+      .accounts({
+        pool: poolKp_b.publicKey,
+        poolMint: poolMint_b,
+      })
+      .signers([poolKp_b])
+      .rpc();
+
+    // deposit enough to create a competition
+    const [poolLpMint_a] = findPoolLpMint(poolKp_a.publicKey, program.programId);
+    const [poolLpMint_b] = findPoolLpMint(poolKp_b.publicKey, program.programId);
+
+    const userLpTokenAccount_a = await createTokenAccount(provider, poolLpMint_a, provider.wallet.publicKey);
+    const userLpTokenAccount_b = await createTokenAccount(provider, poolLpMint_b, provider.wallet.publicKey);
+
+    const depositedMint = 200;
+    await program.methods
+      .deposit(new anchor.BN(depositedMint))
+      .accounts({
+        poolMint: poolMint_a,
+        userTokenAccount: poolVault_a,
+        userLpTokenAccount: userLpTokenAccount_a,
+        pool: poolKp_a.publicKey,
+      })
+      .rpc();
+    await program.methods
+      .deposit(new anchor.BN(depositedMint))
+      .accounts({
+        poolMint: poolMint_b,
+        userTokenAccount: poolVault_b,
+        userLpTokenAccount: userLpTokenAccount_b,
+        pool: poolKp_b.publicKey,
+      })
+      .rpc();
+
+    // create competition
+    const competitionKp = anchor.web3.Keypair.generate();
+    await program.methods
+      .createCompetition()
+      .accounts({
+        poolA: poolKp_a.publicKey,
+        poolB: poolKp_b.publicKey,
+        competition: competitionKp.publicKey,
+      })
+      .signers([competitionKp])
+      .rpc();
+
+    // check that the pools are now closed
+    let account_pool_a = await program.account.pool.fetch(poolKp_a.publicKey);
+    let account_pool_b = await program.account.pool.fetch(poolKp_b.publicKey);
+    expect(account_pool_a.isOpen).to.be.false;
+    expect(account_pool_b.isOpen).to.be.false;
+
+    // check that the competition is created
+    let competition = await program.account.competition.fetch(competitionKp.publicKey);
+    expect(competition.isOpen).to.be.true;
+
+    expect(competition.owner.equals(account_pool_a.owner)).to.be.true;
+    expect(competition.owner.equals(account_pool_b.owner)).to.be.true;
+    expect(competition.owner.equals(provider.wallet.publicKey)).to.be.true;
+
+    expect(competition.poolA.equals(poolKp_a.publicKey)).to.be.true;
+    expect(competition.poolB.equals(poolKp_b.publicKey)).to.be.true;
   });
 });
