@@ -1,3 +1,4 @@
+pub mod errors;
 pub mod instructions;
 pub mod state;
 
@@ -22,5 +23,9 @@ pub mod intraverse_memefight {
 
     pub fn deposit(ctx: Context<DepositPoolContext>, amount: u64) -> Result<()> {
         instructions::deposit::handler(ctx, amount)
+    }
+
+    pub fn withdraw(ctx: Context<WithdrawPoolContext>, amount: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, amount)
     }
 }

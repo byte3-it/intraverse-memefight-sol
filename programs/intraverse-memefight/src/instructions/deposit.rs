@@ -1,4 +1,4 @@
-use crate::state::Pool;
+use crate::{errors::IntraverseErrorCode, state::Pool};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
@@ -33,6 +33,12 @@ pub struct DepositPoolContext<'info> {
 
 pub fn handler(ctx: Context<DepositPoolContext>, amount: u64) -> Result<()> {
     msg!("pool deposit");
+
+    // check if the pool is open
+    if !ctx.accounts.pool.is_open {
+        msg!("pool is closed");
+        return err!(IntraverseErrorCode::PoolIsClosed);
+    }
 
     // transfer from user account to pool_treasury
     msg!("transfer tokens");

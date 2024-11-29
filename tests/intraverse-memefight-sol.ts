@@ -1,9 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { IntraverseMemefight } from "../target/types/intraverse_memefight";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 import { createMintAndVault, createTokenAccount, getTokenAccountAmount } from "./utils";
-const { SystemProgram } = anchor.web3;
+import { findPoolLpMint } from "./intraverse-utils";
 
 describe("intraverse-memefight", () => {
   // Configure the client to use the local cluster.
@@ -77,7 +77,98 @@ describe("intraverse-memefight", () => {
     assert.ok(account.isOpen == true);
   });
 
-  it("an account can deposit on the pool", async () => {
+  it("cannot deposit on a pool if is closed", async () => {
+    const poolKp = anchor.web3.Keypair.generate();
+    const [poolMint, poolVault] = await createMintAndVault(provider, 1000);
+
+    await program.methods
+      .initializePool(new anchor.BN(1234))
+      .accounts({
+        pool: poolKp.publicKey,
+        authority: provider.wallet.publicKey,
+        poolMint: poolMint,
+      })
+      .signers([poolKp])
+      .rpc();
+
+    await program.methods
+      .togglePool()
+      .accounts({
+        pool: poolKp.publicKey,
+      })
+      .rpc();
+
+    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
+
+    const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
+
+    try {
+      await program.methods
+        .deposit(new anchor.BN(100))
+        .accounts({
+          poolMint: poolMint,
+          userTokenAccount: poolVault,
+          userLpTokenAccount: userLpTokenAccount,
+          pool: poolKp.publicKey,
+        })
+        .rpc();
+      expect(true).to.be.false;
+    } catch (err) {
+      expect(err.message).to.contain("Error Code: PoolIsClosed.");
+    }
+  });
+
+  it("cannot withdraw on a pool if is closed", async () => {
+    const poolKp = anchor.web3.Keypair.generate();
+    const [poolMint, poolVault] = await createMintAndVault(provider, 1000);
+
+    await program.methods
+      .initializePool(new anchor.BN(1234))
+      .accounts({
+        pool: poolKp.publicKey,
+        authority: provider.wallet.publicKey,
+        poolMint: poolMint,
+      })
+      .signers([poolKp])
+      .rpc();
+
+    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
+    const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
+
+    await program.methods
+      .deposit(new anchor.BN(100))
+      .accounts({
+        poolMint: poolMint,
+        userTokenAccount: poolVault,
+        userLpTokenAccount: userLpTokenAccount,
+        pool: poolKp.publicKey,
+      })
+      .rpc();
+
+    await program.methods
+      .togglePool()
+      .accounts({
+        pool: poolKp.publicKey,
+      })
+      .rpc();
+
+    try {
+      await program.methods
+        .withdraw(new anchor.BN(10))
+        .accounts({
+          poolMint: poolMint,
+          userTokenAccount: poolVault,
+          userLpTokenAccount: userLpTokenAccount,
+          pool: poolKp.publicKey,
+        })
+        .rpc();
+      expect(true).to.be.false;
+    } catch (err) {
+      expect(err.message).to.contain("Error Code: PoolIsClosed.");
+    }
+  });
+
+  it("an account can deposit on the pool and then withdraw", async () => {
     const poolKp = anchor.web3.Keypair.generate();
     const initialMintAmount = 5000;
     const [poolMint, poolVault] = await createMintAndVault(provider, initialMintAmount);
@@ -92,10 +183,7 @@ describe("intraverse-memefight", () => {
       .signers([poolKp])
       .rpc();
 
-    const [poolLpMint] = anchor.web3.PublicKey.findProgramAddressSync(
-      [anchor.utils.bytes.utf8.encode("lp"), poolKp.publicKey.toBuffer()],
-      program.programId
-    );
+    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
 
     const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
 
@@ -115,9 +203,25 @@ describe("intraverse-memefight", () => {
       program.programId
     );
 
-    // check that the pool treasuary has the correct amount
+    // check that the token accounts have the correct amount
     assert.equal(await getTokenAccountAmount(provider, poolVault), initialMintAmount - depositedMint);
     assert.equal(await getTokenAccountAmount(provider, poolTreasury), depositedMint);
     assert.equal(await getTokenAccountAmount(provider, userLpTokenAccount), depositedMint);
+
+    const withdrawAmount = 1000;
+    await program.methods
+      .withdraw(new anchor.BN(withdrawAmount))
+      .accounts({
+        poolMint: poolMint,
+        userTokenAccount: poolVault,
+        userLpTokenAccount: userLpTokenAccount,
+        pool: poolKp.publicKey,
+      })
+      .rpc();
+
+    // check that the token accounts have the correct amount
+    assert.equal(await getTokenAccountAmount(provider, poolVault), initialMintAmount - depositedMint + withdrawAmount);
+    assert.equal(await getTokenAccountAmount(provider, poolTreasury), depositedMint - withdrawAmount);
+    assert.equal(await getTokenAccountAmount(provider, userLpTokenAccount), depositedMint - withdrawAmount);
   });
 });
