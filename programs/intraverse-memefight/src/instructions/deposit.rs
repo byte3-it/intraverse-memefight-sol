@@ -7,7 +7,7 @@ pub struct DepositPoolContext<'info> {
     #[account()]
     pub pool_mint: Account<'info, Mint>,
 
-    #[account(mut, seeds = [b"lp".as_ref(), pool.key().as_ref()], bump, mint::authority = pool_authority)]
+    #[account(mut, mint::authority = pool_authority)]
     pub pool_lp_mint: Account<'info, Mint>,
 
     #[account(mut, seeds = [b"treasury".as_ref(), pool.key().as_ref(), pool_mint.key().as_ref()], bump, token::authority = pool_authority, token::mint = pool_mint)]

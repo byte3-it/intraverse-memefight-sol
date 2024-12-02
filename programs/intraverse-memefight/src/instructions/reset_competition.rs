@@ -7,11 +7,14 @@ pub struct ResetCompetitionContext<'info> {
     /// * * * * * * * * * * * *
     /// POOL A
 
-    #[account(mut, has_one = owner)]
+    #[account(mut, has_one = owner, constraint = pool_a.pool_lp_mint == old_pool_a_lp_mint.key())]
     pub pool_a: Account<'info, Pool>,
 
-    // #[account(seeds = [b"lp".as_ref(), pool_a.key().as_ref()], bump, mint::authority = pool_a_authority)]
-    pub pool_a_lp_mint: Account<'info, Mint>,
+    #[account(mint::authority = pool_a_authority)]
+    pub old_pool_a_lp_mint: Account<'info, Mint>,
+
+    #[account(init, payer = owner, mint::decimals = old_pool_a_lp_mint.decimals, mint::authority = pool_a_authority)]
+    pub new_pool_a_lp_mint: Box<Account<'info, Mint>>,
 
     #[account(mut, seeds = [b"treasury".as_ref(), pool_a.key().as_ref(), pool_a.mint.as_ref()], bump, token::authority = pool_a_authority, token::mint = pool_a.mint)]
     pub pool_a_treasury: Account<'info, TokenAccount>,
@@ -25,11 +28,15 @@ pub struct ResetCompetitionContext<'info> {
     /// * * * * * * * * * * * *
     /// POOL B
 
-    #[account(mut, has_one = owner)]
+    #[account(mut, has_one = owner, constraint = pool_b.pool_lp_mint == old_pool_b_lp_mint.key())]
     pub pool_b: Account<'info, Pool>,
 
-    // #[account(seeds = [b"lp".as_ref(), pool_b.key().as_ref()], bump, mint::authority = pool_b_authority)]
-    // pub pool_b_lp_mint: Account<'info, Mint>,
+    #[account(mint::authority = pool_b_authority)]
+    pub old_pool_b_lp_mint: Account<'info, Mint>,
+
+    #[account(init, payer = owner, mint::decimals = old_pool_b_lp_mint.decimals, mint::authority = pool_a_authority)]
+    pub new_pool_b_lp_mint: Box<Account<'info, Mint>>,
+
     #[account(mut, seeds = [b"treasury".as_ref(), pool_b.key().as_ref(), pool_b.mint.as_ref()], bump, token::authority = pool_b_authority, token::mint = pool_b.mint)]
     pub pool_b_treasury: Account<'info, TokenAccount>,
 
@@ -95,7 +102,17 @@ pub fn handler(ctx: Context<ResetCompetitionContext>) -> Result<()> {
         ctx.accounts.pool_b_treasury.amount,
     )?;
 
-    // TODO reset LP mints, they cannot be PDAs as they are now
+    // reset LP mints
+
+    // close old_pool_a_lp_mint
+    ctx.accounts
+        .old_pool_a_lp_mint
+        .close(ctx.accounts.owner.to_account_info())?;
+    ctx.accounts
+        .old_pool_b_lp_mint
+        .close(ctx.accounts.owner.to_account_info())?;
+    ctx.accounts.pool_a.pool_lp_mint = ctx.accounts.new_pool_a_lp_mint.key();
+    ctx.accounts.pool_b.pool_lp_mint = ctx.accounts.new_pool_b_lp_mint.key();
 
     Ok(())
 }

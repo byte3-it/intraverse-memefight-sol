@@ -3,7 +3,8 @@ import { Program } from "@coral-xyz/anchor";
 import { IntraverseMemefight } from "../target/types/intraverse_memefight";
 import { assert, expect } from "chai";
 import { createMintAndVault, createTokenAccount, getTokenAccountAmount } from "./utils";
-import { findPoolLpMint } from "./intraverse-utils";
+import { findPoolAuthorityMint } from "./intraverse-utils";
+import { getMint } from "@solana/spl-token";
 
 describe("intraverse-memefight", () => {
   // Configure the client to use the local cluster.
@@ -14,6 +15,7 @@ describe("intraverse-memefight", () => {
 
   it("pool initialization", async () => {
     const poolKp = anchor.web3.Keypair.generate();
+    const poolLpKp = anchor.web3.Keypair.generate();
     const [poolMint] = await createMintAndVault(provider, 1000);
 
     await program.methods
@@ -21,24 +23,33 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp.publicKey,
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
       })
-      .signers([poolKp])
+      .signers([poolKp, poolLpKp])
       .rpc();
 
     // Fetch the newly created account from the cluster.
     const account = await program.account.pool.fetch(poolKp.publicKey);
 
     // Check it's state was initialized.
-    assert.ok(account.activationTh.eq(new anchor.BN(1234)));
-    assert.ok(account.isOpen);
-    assert.ok(account.mint.equals(poolMint));
-    assert.ok(account.owner.equals(provider.wallet.publicKey));
+    expect(account.activationTh.toNumber()).to.be.eq(new anchor.BN(1234).toNumber());
+    expect(account.isOpen).to.be.true;
+    expect(account.poolLpMint.toBase58()).to.be.eq(poolLpKp.publicKey.toBase58());
+    expect(account.mint.toBase58()).to.be.eq(poolMint.toBase58());
+    expect(account.owner.toBase58()).to.be.eq(provider.wallet.publicKey.toBase58());
 
-    // TODO check authority of poolLpMint
+    // check authority of poolLpMint
+    const poolMint_info = await getMint(provider.connection, poolLpKp.publicKey);
+    const poolLpMint_info = await getMint(provider.connection, poolLpKp.publicKey);
+    expect(poolMint_info.decimals).to.be.eq(poolLpMint_info.decimals);
+
+    const [poolAuthority] = findPoolAuthorityMint(poolKp.publicKey, program.programId);
+    expect(poolLpMint_info.mintAuthority.toBase58()).to.be.eq(poolAuthority.toBase58());
   });
 
   it("authority can change a pool", async () => {
     const poolKp = anchor.web3.Keypair.generate();
+    const poolLpKp = anchor.web3.Keypair.generate();
     const [poolMint] = await createMintAndVault(provider, 1000);
 
     await program.methods
@@ -46,8 +57,9 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp.publicKey,
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
       })
-      .signers([poolKp])
+      .signers([poolKp, poolLpKp])
       .rpc();
 
     // Fetch the newly created account from the cluster.
@@ -85,6 +97,7 @@ describe("intraverse-memefight", () => {
 
   it("cannot deposit on a pool if is closed", async () => {
     const poolKp = anchor.web3.Keypair.generate();
+    const poolLpKp = anchor.web3.Keypair.generate();
     const [poolMint, poolVault] = await createMintAndVault(provider, 1000);
 
     await program.methods
@@ -92,8 +105,9 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp.publicKey,
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
       })
-      .signers([poolKp])
+      .signers([poolKp, poolLpKp])
       .rpc();
 
     await program.methods
@@ -106,15 +120,14 @@ describe("intraverse-memefight", () => {
       })
       .rpc();
 
-    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
-
-    const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
+    const userLpTokenAccount = await createTokenAccount(provider, poolLpKp.publicKey, provider.wallet.publicKey);
 
     try {
       await program.methods
         .deposit(new anchor.BN(100))
         .accounts({
           poolMint: poolMint,
+          poolLpMint: poolLpKp.publicKey,
           userTokenAccount: poolVault,
           userLpTokenAccount: userLpTokenAccount,
           pool: poolKp.publicKey,
@@ -128,6 +141,7 @@ describe("intraverse-memefight", () => {
 
   it("cannot withdraw on a pool if is closed", async () => {
     const poolKp = anchor.web3.Keypair.generate();
+    const poolLpKp = anchor.web3.Keypair.generate();
     const [poolMint, poolVault] = await createMintAndVault(provider, 1000);
 
     await program.methods
@@ -135,17 +149,18 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp.publicKey,
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
       })
-      .signers([poolKp])
+      .signers([poolKp, poolLpKp])
       .rpc();
 
-    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
-    const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
+    const userLpTokenAccount = await createTokenAccount(provider, poolLpKp.publicKey, provider.wallet.publicKey);
 
     await program.methods
       .deposit(new anchor.BN(100))
       .accounts({
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
         userTokenAccount: poolVault,
         userLpTokenAccount: userLpTokenAccount,
         pool: poolKp.publicKey,
@@ -167,6 +182,7 @@ describe("intraverse-memefight", () => {
         .withdraw(new anchor.BN(10))
         .accounts({
           poolMint: poolMint,
+          poolLpMint: poolLpKp.publicKey,
           userTokenAccount: poolVault,
           userLpTokenAccount: userLpTokenAccount,
           pool: poolKp.publicKey,
@@ -180,6 +196,7 @@ describe("intraverse-memefight", () => {
 
   it("an account can deposit on the pool and then withdraw", async () => {
     const poolKp = anchor.web3.Keypair.generate();
+    const poolLpKp = anchor.web3.Keypair.generate();
     const initialMintAmount = 5000;
     const [poolMint, poolVault] = await createMintAndVault(provider, initialMintAmount);
 
@@ -188,19 +205,19 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp.publicKey,
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
       })
-      .signers([poolKp])
+      .signers([poolKp, poolLpKp])
       .rpc();
 
-    const [poolLpMint] = findPoolLpMint(poolKp.publicKey, program.programId);
-
-    const userLpTokenAccount = await createTokenAccount(provider, poolLpMint, provider.wallet.publicKey);
+    const userLpTokenAccount = await createTokenAccount(provider, poolLpKp.publicKey, provider.wallet.publicKey);
 
     const depositedMint = 2000;
     await program.methods
       .deposit(new anchor.BN(depositedMint))
       .accounts({
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
         userTokenAccount: poolVault,
         userLpTokenAccount: userLpTokenAccount,
         pool: poolKp.publicKey,
@@ -222,6 +239,7 @@ describe("intraverse-memefight", () => {
       .withdraw(new anchor.BN(withdrawAmount))
       .accounts({
         poolMint: poolMint,
+        poolLpMint: poolLpKp.publicKey,
         userTokenAccount: poolVault,
         userLpTokenAccount: userLpTokenAccount,
         pool: poolKp.publicKey,
@@ -236,7 +254,9 @@ describe("intraverse-memefight", () => {
 
   it("create a competition", async () => {
     const poolKp_a = anchor.web3.Keypair.generate();
+    const poolLpKp_a = anchor.web3.Keypair.generate();
     const poolKp_b = anchor.web3.Keypair.generate();
+    const poolLpKp_b = anchor.web3.Keypair.generate();
     const initialMintAmount = 5000;
     const [poolMint_a, poolVault_a] = await createMintAndVault(provider, initialMintAmount);
     const [poolMint_b, poolVault_b] = await createMintAndVault(provider, initialMintAmount);
@@ -247,30 +267,31 @@ describe("intraverse-memefight", () => {
       .accounts({
         pool: poolKp_a.publicKey,
         poolMint: poolMint_a,
+        poolLpMint: poolLpKp_a.publicKey,
       })
-      .signers([poolKp_a])
+      .signers([poolKp_a, poolLpKp_a])
       .rpc();
     await program.methods
       .initializePool(new anchor.BN(100))
       .accounts({
         pool: poolKp_b.publicKey,
         poolMint: poolMint_b,
+        poolLpMint: poolLpKp_b.publicKey,
       })
-      .signers([poolKp_b])
+      .signers([poolKp_b, poolLpKp_b])
       .rpc();
 
     // deposit enough to create a competition
-    const [poolLpMint_a] = findPoolLpMint(poolKp_a.publicKey, program.programId);
-    const [poolLpMint_b] = findPoolLpMint(poolKp_b.publicKey, program.programId);
 
-    const userLpTokenAccount_a = await createTokenAccount(provider, poolLpMint_a, provider.wallet.publicKey);
-    const userLpTokenAccount_b = await createTokenAccount(provider, poolLpMint_b, provider.wallet.publicKey);
+    const userLpTokenAccount_a = await createTokenAccount(provider, poolLpKp_a.publicKey, provider.wallet.publicKey);
+    const userLpTokenAccount_b = await createTokenAccount(provider, poolLpKp_b.publicKey, provider.wallet.publicKey);
 
     const depositedMint = 200;
     await program.methods
       .deposit(new anchor.BN(depositedMint))
       .accounts({
         poolMint: poolMint_a,
+        poolLpMint: poolLpKp_a.publicKey,
         userTokenAccount: poolVault_a,
         userLpTokenAccount: userLpTokenAccount_a,
         pool: poolKp_a.publicKey,
@@ -280,6 +301,7 @@ describe("intraverse-memefight", () => {
       .deposit(new anchor.BN(depositedMint))
       .accounts({
         poolMint: poolMint_b,
+        poolLpMint: poolLpKp_b.publicKey,
         userTokenAccount: poolVault_b,
         userLpTokenAccount: userLpTokenAccount_b,
         pool: poolKp_b.publicKey,
@@ -292,7 +314,9 @@ describe("intraverse-memefight", () => {
       .createCompetition()
       .accounts({
         poolA: poolKp_a.publicKey,
+        poolALpMint: poolLpKp_a.publicKey,
         poolB: poolKp_b.publicKey,
+        poolBLpMint: poolLpKp_b.publicKey,
         competition: competitionKp.publicKey,
       })
       .signers([competitionKp])

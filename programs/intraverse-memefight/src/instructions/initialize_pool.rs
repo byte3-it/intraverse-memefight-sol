@@ -7,7 +7,7 @@ pub struct InitializePoolContext<'info> {
     #[account()]
     pub pool_mint: Box<Account<'info, Mint>>,
 
-    #[account(init, payer = owner, seeds = [b"lp".as_ref(), pool.key().as_ref()], bump, mint::decimals = pool_mint.decimals, mint::authority = pool_authority)]
+    #[account(init, payer = owner, mint::decimals = pool_mint.decimals, mint::authority = pool_authority)]
     pub pool_lp_mint: Box<Account<'info, Mint>>,
 
     #[account(init, payer = owner, seeds = [b"treasury".as_ref(), pool.key().as_ref(), pool_mint.key().as_ref()], bump, token::authority = pool_authority, token::mint = pool_mint)]

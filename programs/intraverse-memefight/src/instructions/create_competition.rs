@@ -13,7 +13,7 @@ pub struct CreateCompetitionContext<'info> {
     #[account(mut, has_one = owner)]
     pub pool_a: Account<'info, Pool>,
 
-    #[account(seeds = [b"lp".as_ref(), pool_a.key().as_ref()], bump, mint::authority = pool_a_authority)]
+    #[account(mint::authority = pool_a_authority)]
     pub pool_a_lp_mint: Account<'info, Mint>,
 
     #[account(seeds = [b"authority".as_ref(), pool_a.key().as_ref()], bump)]
@@ -25,7 +25,7 @@ pub struct CreateCompetitionContext<'info> {
     #[account(mut, has_one = owner)]
     pub pool_b: Account<'info, Pool>,
 
-    #[account(seeds = [b"lp".as_ref(), pool_b.key().as_ref()], bump, mint::authority = pool_b_authority)]
+    #[account(mint::authority = pool_b_authority)]
     pub pool_b_lp_mint: Account<'info, Mint>,
 
     #[account(seeds = [b"authority".as_ref(), pool_b.key().as_ref()], bump)]
