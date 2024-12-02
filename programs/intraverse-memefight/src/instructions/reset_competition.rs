@@ -1,6 +1,6 @@
 use crate::state::{Competition, Pool};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 #[derive(Accounts)]
 pub struct ResetCompetitionContext<'info> {

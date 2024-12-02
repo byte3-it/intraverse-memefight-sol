@@ -1,4 +1,5 @@
 pub mod errors;
+#[allow(ambiguous_glob_reexports)]
 pub mod instructions;
 pub mod state;
 
@@ -17,8 +18,8 @@ pub mod intraverse_memefight {
         instructions::initialize_pool::handler(ctx, activation_th)
     }
 
-    pub fn toggle_pool(ctx: Context<TogglePoolContext>) -> Result<()> {
-        instructions::toggle_pool::handler(ctx)
+    pub fn update_pool(ctx: Context<UpdatePoolContext>, input_data: UpdatePoolArgs) -> Result<()> {
+        instructions::update_pool::handler(ctx, input_data)
     }
 
     pub fn deposit(ctx: Context<DepositPoolContext>, amount: u64) -> Result<()> {

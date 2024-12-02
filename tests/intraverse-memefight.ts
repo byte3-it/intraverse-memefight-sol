@@ -37,7 +37,7 @@ describe("intraverse-memefight", () => {
     // TODO check authority of poolLpMint
   });
 
-  it("authority can toggle isOpen", async () => {
+  it("authority can change a pool", async () => {
     const poolKp = anchor.web3.Keypair.generate();
     const [poolMint] = await createMintAndVault(provider, 1000);
 
@@ -55,7 +55,10 @@ describe("intraverse-memefight", () => {
     assert.ok(account.isOpen == true);
 
     await program.methods
-      .togglePool()
+      .updatePool({
+        isOpen: false,
+        activationTh: new anchor.BN(1000),
+      })
       .accounts({
         pool: poolKp.publicKey,
       })
@@ -63,9 +66,13 @@ describe("intraverse-memefight", () => {
 
     account = await program.account.pool.fetch(poolKp.publicKey);
     assert.ok(account.isOpen == false);
+    assert.ok(account.activationTh.toNumber() == 1000);
 
     await program.methods
-      .togglePool()
+      .updatePool({
+        isOpen: true,
+        activationTh: new anchor.BN(2000),
+      })
       .accounts({
         pool: poolKp.publicKey,
       })
@@ -73,6 +80,7 @@ describe("intraverse-memefight", () => {
 
     account = await program.account.pool.fetch(poolKp.publicKey);
     assert.ok(account.isOpen == true);
+    assert.ok(account.activationTh.toNumber() == 2000);
   });
 
   it("cannot deposit on a pool if is closed", async () => {
@@ -89,7 +97,10 @@ describe("intraverse-memefight", () => {
       .rpc();
 
     await program.methods
-      .togglePool()
+      .updatePool({
+        isOpen: false,
+        activationTh: new anchor.BN(1234),
+      })
       .accounts({
         pool: poolKp.publicKey,
       })
@@ -142,7 +153,10 @@ describe("intraverse-memefight", () => {
       .rpc();
 
     await program.methods
-      .togglePool()
+      .updatePool({
+        isOpen: false,
+        activationTh: new anchor.BN(1234),
+      })
       .accounts({
         pool: poolKp.publicKey,
       })
