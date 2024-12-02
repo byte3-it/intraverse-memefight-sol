@@ -220,7 +220,7 @@ describe("intraverse-memefight", () => {
     assert.equal(await getTokenAccountAmount(provider, userLpTokenAccount), depositedMint - withdrawAmount);
   });
 
-  it.only("create a competition", async () => {
+  it("create a competition", async () => {
     const poolKp_a = anchor.web3.Keypair.generate();
     const poolKp_b = anchor.web3.Keypair.generate();
     const initialMintAmount = 5000;
@@ -292,13 +292,13 @@ describe("intraverse-memefight", () => {
 
     // check that the competition is created
     let competition = await program.account.competition.fetch(competitionKp.publicKey);
-    expect(competition.isOpen).to.be.true;
+    expect(competition.isAWinner).to.be.null;
 
-    expect(competition.owner.equals(account_pool_a.owner)).to.be.true;
-    expect(competition.owner.equals(account_pool_b.owner)).to.be.true;
-    expect(competition.owner.equals(provider.wallet.publicKey)).to.be.true;
+    expect(competition.owner.toBase58()).to.be.eq(account_pool_a.owner.toBase58());
+    expect(competition.owner.toBase58()).to.be.eq(account_pool_b.owner.toBase58());
+    expect(competition.owner.toBase58()).to.be.eq(provider.wallet.publicKey.toBase58());
 
-    expect(competition.poolA.equals(poolKp_a.publicKey)).to.be.true;
-    expect(competition.poolB.equals(poolKp_b.publicKey)).to.be.true;
+    expect(competition.poolA.toBase58()).to.be.eq(poolKp_a.publicKey.toBase58());
+    expect(competition.poolB.toBase58()).to.be.eq(poolKp_b.publicKey.toBase58());
   });
 });
