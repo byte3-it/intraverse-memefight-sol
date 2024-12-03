@@ -13,10 +13,10 @@ pub struct DepositPoolContext<'info> {
     #[account(mut, seeds = [b"treasury".as_ref(), pool.key().as_ref(), pool_mint.key().as_ref()], bump, token::authority = pool_authority, token::mint = pool_mint)]
     pub pool_treasury: Account<'info, TokenAccount>,
 
-    #[account(mut, token::authority = authority, token::mint = pool_mint)]
+    #[account(mut, token::mint = pool_mint)]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut, token::authority = authority, token::mint = pool_lp_mint)]
+    #[account(mut, token::mint = pool_lp_mint)]
     pub user_lp_token_account: Account<'info, TokenAccount>,
 
     #[account()]
@@ -26,7 +26,7 @@ pub struct DepositPoolContext<'info> {
     pub pool_authority: AccountInfo<'info>,
 
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub user: Signer<'info>,
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
 }
@@ -48,7 +48,7 @@ pub fn handler(ctx: Context<DepositPoolContext>, amount: u64) -> Result<()> {
             Transfer {
                 from: ctx.accounts.user_token_account.to_account_info(),
                 to: ctx.accounts.pool_treasury.to_account_info(),
-                authority: ctx.accounts.authority.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
             },
         ),
         amount,

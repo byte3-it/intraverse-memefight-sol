@@ -3,6 +3,7 @@ import {
   createAssociatedTokenAccountInstruction,
   createInitializeMintInstruction,
   createMintToInstruction,
+  createTransferInstruction,
   getAccount,
   getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
@@ -46,6 +47,18 @@ export async function createMintAndVault(provider: anchor.AnchorProvider, amount
   const signature = await provider.sendAndConfirm(tx, [mint, authority]);
 
   return [mint.publicKey, aToken];
+}
+
+export async function transferTokens(
+  provider: anchor.AnchorProvider,
+  source: anchor.web3.PublicKey,
+  destination: anchor.web3.PublicKey,
+  owner: anchor.web3.PublicKey,
+  amount: number | bigint
+) {
+  const tx = new anchor.web3.Transaction();
+  tx.add(createTransferInstruction(source, destination, owner, amount));
+  return await provider.sendAndConfirm(tx);
 }
 
 export async function createMintInstructions(
