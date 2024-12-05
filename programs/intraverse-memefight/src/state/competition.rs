@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub struct Competition {
     pub pool_a: Pubkey,
     pub pool_b: Pubkey,
+    pub players_lp_mint: Pubkey,
 
     pub is_a_winner: Option<bool>,
 
@@ -19,6 +20,7 @@ impl Competition {
     pub const LEN: usize = 8 + // discriminator
         32 + // pub pool_a: Pubkey
         32 + // pub pool_b: Pubkey
+        32 + // pub players_lp_mint: Pubkey,
         1 + 1 + // pub is_a_winner: Option<bool>
         32; // pub owner: Pubkey
 }

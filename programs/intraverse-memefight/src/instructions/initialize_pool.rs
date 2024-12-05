@@ -29,7 +29,7 @@ pub fn handler(ctx: Context<InitializePoolContext>, activation_th: u64) -> Resul
     msg!("pool initialization");
 
     ctx.accounts.pool.mint = ctx.accounts.pool_mint.key();
-    ctx.accounts.pool.pool_lp_mint = ctx.accounts.pool_lp_mint.key();
+    ctx.accounts.pool.lp_mint = ctx.accounts.pool_lp_mint.key();
     ctx.accounts.pool.owner = ctx.accounts.owner.key();
     ctx.accounts.pool.activation_th = activation_th;
     ctx.accounts.pool.is_open = true;

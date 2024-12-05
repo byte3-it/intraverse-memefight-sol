@@ -47,7 +47,7 @@ pub struct CreateCompetitionContext<'info> {
 pub fn handler(ctx: Context<CreateCompetitionContext>) -> Result<()> {
     msg!("create competition");
 
-    // check that both pools have the same authority
+    // check that both pools have the same owner
     if ctx.accounts.pool_a.owner.key() != ctx.accounts.pool_b.owner.key() {
         msg!("pools have different authorities");
         return err!(IntraverseErrorCode::PoolAuthoritiesMismatch);
@@ -80,7 +80,7 @@ pub fn handler(ctx: Context<CreateCompetitionContext>) -> Result<()> {
 
     // create the competition
     ctx.accounts.competition.is_a_winner = None;
-    ctx.accounts.competition.owner = ctx.accounts.pool_a.owner;
+    ctx.accounts.competition.owner = ctx.accounts.pool_a.owner; // equal to pool_b.owner
     ctx.accounts.competition.pool_a = ctx.accounts.pool_a.key();
     ctx.accounts.competition.pool_b = ctx.accounts.pool_b.key();
 

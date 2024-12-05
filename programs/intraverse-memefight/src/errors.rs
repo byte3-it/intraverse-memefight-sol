@@ -16,4 +16,7 @@ pub enum IntraverseErrorCode {
 
     #[msg("pools authorities mismatch")]
     PoolAuthoritiesMismatch,
+
+    #[msg("competition is open")]
+    CompetitionIsOpen,
 }
